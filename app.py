@@ -44,14 +44,24 @@ def home():
 def predict():
     try:
         data = request.get_json()
-
         if not data or "text" not in data:
             return jsonify({"error": "Missing 'text' in request"}), 400
 
-        cleaned = clean_text(data["text"])
+        raw_text = data["text"]
+        cleaned = clean_text(raw_text)
+
+        # Keyword-based override (optional shortcut)
+        keywords = ["depression", "depressed", "hopeless", "worthless", "anxious", "empty", "suicidal", "down", "lonely"]
+        if any(word in cleaned.split() for word in keywords):
+            return jsonify({
+                "result": "Anxiety/Depression",
+                "confidence": 95.0,
+                "note": "Detected based on strong keywords"
+            })
+
+        # Model prediction
         sequence = tokenizer.texts_to_sequences([cleaned])
         padded = pad_sequences(sequence, maxlen=100)
-
         prob = model.predict(padded)[0][0]
         label = "Anxiety/Depression" if prob > 0.5 else "Normal"
         confidence = round(float(prob) * 100, 2)
@@ -60,6 +70,7 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # Run the app
 if __name__ == "__main__":
