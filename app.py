@@ -8,7 +8,7 @@ import gdown
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
-# Download NLTK stopwords
+# Setup
 nltk.download('stopwords')
 stop_words = set(stopwords.words("english"))
 ps = PorterStemmer()
@@ -16,27 +16,39 @@ ps = PorterStemmer()
 app = Flask(__name__)
 CORS(app)
 
-# === GOOGLE DRIVE CONFIG ===
-MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # 🔁 Replace with your actual Google Drive file ID
+# === Google Drive Model Config ===
+MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # 🔁 Replace with your Drive file ID
 MODEL_PATH = "CV_BestModel.sav"
 VECTORIZER_PATH = "vectorizer.sav"
 
-# === TEXT CLEANING ===
+# === Text Preprocessing ===
 def clean_text(text):
     text = re.sub('[^a-zA-Z]', ' ', text)
     text = text.lower().split()
     return ' '.join([ps.stem(word) for word in text if word not in stop_words])
 
-# === AUTO-DOWNLOAD MODEL IF NEEDED ===
+# === Download model if not found ===
 if not os.path.exists(MODEL_PATH):
     print("📥 Downloading model from Google Drive...")
     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
-# === LOAD MODEL & VECTORIZER ===
+# === Load model and vectorizer ===
 model = pickle.load(open(MODEL_PATH, "rb"))
 vectorizer = pickle.load(open(VECTORIZER_PATH, "rb"))
 
-# === API ROUTES ===
+# === Keyword trigger fallback ===
+keyword_triggers = [
+    "stressed", "anxious", "anxiety", "depressed", "depression", "panic", "sad",
+    "hopeless", "worthless", "overwhelmed", "numb", "empty", "lonely", "crying", "upset",
+    "can't focus", "tired", "burned out", "unmotivated", "no energy", "exhausted",
+    "negative thoughts", "losing control", "not good enough", "dark thoughts",
+    "self-harm", "cutting", "suicidal", "hate myself", "useless", "burden", "failure",
+    "avoiding people", "socially withdrawn", "no one understands", "isolated", "ignored",
+    "insomnia", "no sleep", "sleeping all day", "chest pain", "racing heart", "tight chest",
+    "shaking", "sweaty", "nausea", "shortness of breath"
+]
+
+# === Routes ===
 @app.route("/", methods=["GET"])
 def home():
     return "✅ Anxiety/Depression Detection API is Live!"
@@ -51,12 +63,16 @@ def predict():
         raw = data["text"]
         cleaned = clean_text(raw)
 
-        # 🔧 Fix for SVC: Convert sparse to dense
-        features = vectorizer.transform([cleaned]).toarray()
-
-        result = model.predict(features)[0]
-        prob = model.predict_proba(features)[0][1]
-        confidence = round(prob * 100, 2)
+        # 🔐 Keyword fallback logic
+        if any(kw in cleaned for kw in keyword_triggers):
+            result = 1
+            confidence = 93.0
+        else:
+            # 🔧 TF-IDF prediction with dense input
+            features = vectorizer.transform([cleaned]).toarray()
+            result = model.predict(features)[0]
+            prob = model.predict_proba(features)[0][1]
+            confidence = round(prob * 100, 2)
 
         if result == 1:
             return jsonify({
@@ -78,12 +94,11 @@ def predict():
 
         return jsonify({
             "result": "Normal",
-            "confidence": round((1 - prob) * 100, 2)
+            "confidence": round((1 - confidence), 2) if 'prob' in locals() else confidence
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# === RUN FLASK ===
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
