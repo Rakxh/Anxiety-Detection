@@ -16,7 +16,7 @@ app = Flask(__name__)
 CORS(app)
 
 # === CONFIG ===
-MODEL_URL = "https://drive.google.com/uc?id=YOUR_FILE_ID"  # replace with your actual file ID
+MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # replace with your actual file ID
 MODEL_PATH = "CV_BestModel.sav"
 VECTORIZER_PATH = "vectorizer.sav"
 
