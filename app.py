@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # === Google Drive config ===
-MODEL_URL = "https://drive.google.com/uc?id=YOUR_FILE_ID"  # 🔁 Replace with your actual Drive model file ID
+MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # 🔁 Replace with your actual Drive model file ID
 MODEL_PATH = "CV_BestModel.sav"
 VECTORIZER_PATH = "vectorizer.sav"
 
