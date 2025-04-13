@@ -8,7 +8,7 @@ import gdown
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
-# Download NLTK data
+# Download NLTK stopwords
 nltk.download('stopwords')
 stop_words = set(stopwords.words("english"))
 ps = PorterStemmer()
@@ -16,8 +16,8 @@ ps = PorterStemmer()
 app = Flask(__name__)
 CORS(app)
 
-# === Google Drive Download Config ===
-MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # Replace with your actual Drive model ID
+# === Google Drive config ===
+MODEL_URL = "https://drive.google.com/uc?id=YOUR_FILE_ID"  # 🔁 Replace with your actual Drive model file ID
 MODEL_PATH = "CV_BestModel.sav"
 VECTORIZER_PATH = "vectorizer.sav"
 
@@ -27,7 +27,7 @@ def clean_text(text):
     text = text.lower().split()
     return ' '.join([ps.stem(word) for word in text if word not in stop_words])
 
-# === Download model from Google Drive if not available ===
+# === Download model if not found ===
 if not os.path.exists(MODEL_PATH):
     print("📥 Downloading model from Google Drive...")
     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
@@ -36,8 +36,8 @@ if not os.path.exists(MODEL_PATH):
 model = pickle.load(open(MODEL_PATH, "rb"))
 vectorizer = pickle.load(open(VECTORIZER_PATH, "rb"))
 
-# === Fallback keywords and negation logic ===
-keyword_triggers = [
+# === Keyword Triggers (stemmed)
+keyword_raw = [
     "stressed", "anxious", "anxiety", "depressed", "depression", "panic", "sad",
     "hopeless", "worthless", "overwhelmed", "numb", "empty", "lonely", "crying", "upset",
     "can't focus", "tired", "burned out", "unmotivated", "no energy", "exhausted",
@@ -47,7 +47,9 @@ keyword_triggers = [
     "insomnia", "no sleep", "sleeping all day", "chest pain", "racing heart", "tight chest",
     "shaking", "sweaty", "nausea", "shortness of breath"
 ]
+keyword_triggers = [ps.stem(w) for w in keyword_raw]
 
+# === Negation Triggers ===
 negation_patterns = [
     "not happy", "not okay", "not fine", "not good", "not feeling well", "not doing great"
 ]
@@ -66,12 +68,13 @@ def predict():
 
         raw = data["text"]
         cleaned = clean_text(raw)
+        cleaned_words = cleaned.split()
 
-        # Fallback based on raw text negation
+        # 🔍 Fallback triggers
         if any(phrase in raw.lower() for phrase in negation_patterns):
             result = 1
             confidence = 91.0
-        elif any(kw in cleaned for kw in keyword_triggers):
+        elif any(kw in cleaned_words for kw in keyword_triggers):
             result = 1
             confidence = 93.0
         else:
@@ -98,7 +101,7 @@ def predict():
                 "tip": "💡 Tip: Try to identify the root cause of your anxiety and talk to someone you trust."
             })
 
-        # Normal fallback
+        # Otherwise → Normal
         if 'prob' in locals():
             normal_conf = round((1 - prob) * 100, 2)
         else:
@@ -112,6 +115,6 @@ def predict():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Run Flask app
+# Run the API
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
