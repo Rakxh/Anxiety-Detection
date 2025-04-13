@@ -91,7 +91,7 @@ def predict():
                 "online_support": "🌐 Online Support: https://www.mentalhealthindia.com/",
                 "tip": "💡 Tip: Try to identify the root cause of your anxiety and talk to someone you trust."
             })
-
+    else:
         return jsonify({
             "result": "Normal",
             "confidence": round((1 - confidence), 2) if 'prob' in locals() else confidence
