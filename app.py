@@ -8,7 +8,7 @@ import gdown
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
-# Setup
+# Download NLTK data
 nltk.download('stopwords')
 stop_words = set(stopwords.words("english"))
 ps = PorterStemmer()
@@ -16,18 +16,18 @@ ps = PorterStemmer()
 app = Flask(__name__)
 CORS(app)
 
-# === Google Drive Model Config ===
-MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # 🔁 Replace with your Drive file ID
+# === Google Drive Download Config ===
+MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # Replace with your actual Drive model ID
 MODEL_PATH = "CV_BestModel.sav"
 VECTORIZER_PATH = "vectorizer.sav"
 
-# === Text Preprocessing ===
+# === Preprocessing ===
 def clean_text(text):
     text = re.sub('[^a-zA-Z]', ' ', text)
     text = text.lower().split()
     return ' '.join([ps.stem(word) for word in text if word not in stop_words])
 
-# === Download model if not found ===
+# === Download model from Google Drive if not available ===
 if not os.path.exists(MODEL_PATH):
     print("📥 Downloading model from Google Drive...")
     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
@@ -36,7 +36,7 @@ if not os.path.exists(MODEL_PATH):
 model = pickle.load(open(MODEL_PATH, "rb"))
 vectorizer = pickle.load(open(VECTORIZER_PATH, "rb"))
 
-# === Keyword trigger fallback ===
+# === Fallback keywords and negation logic ===
 keyword_triggers = [
     "stressed", "anxious", "anxiety", "depressed", "depression", "panic", "sad",
     "hopeless", "worthless", "overwhelmed", "numb", "empty", "lonely", "crying", "upset",
@@ -46,6 +46,10 @@ keyword_triggers = [
     "avoiding people", "socially withdrawn", "no one understands", "isolated", "ignored",
     "insomnia", "no sleep", "sleeping all day", "chest pain", "racing heart", "tight chest",
     "shaking", "sweaty", "nausea", "shortness of breath"
+]
+
+negation_patterns = [
+    "not happy", "not okay", "not fine", "not good", "not feeling well", "not doing great"
 ]
 
 # === Routes ===
@@ -63,12 +67,14 @@ def predict():
         raw = data["text"]
         cleaned = clean_text(raw)
 
-        # 🔐 Keyword fallback logic
-        if any(kw in cleaned for kw in keyword_triggers):
+        # Fallback based on raw text negation
+        if any(phrase in raw.lower() for phrase in negation_patterns):
+            result = 1
+            confidence = 91.0
+        elif any(kw in cleaned for kw in keyword_triggers):
             result = 1
             confidence = 93.0
         else:
-            # 🔧 TF-IDF prediction with dense input
             features = vectorizer.transform([cleaned]).toarray()
             result = model.predict(features)[0]
             prob = model.predict_proba(features)[0][1]
@@ -91,14 +97,21 @@ def predict():
                 "online_support": "🌐 Online Support: https://www.mentalhealthindia.com/",
                 "tip": "💡 Tip: Try to identify the root cause of your anxiety and talk to someone you trust."
             })
-    else:
+
+        # Normal fallback
+        if 'prob' in locals():
+            normal_conf = round((1 - prob) * 100, 2)
+        else:
+            normal_conf = 100 - confidence if confidence < 100 else 100.0
+
         return jsonify({
             "result": "Normal",
-            "confidence": round((1 - confidence), 2) if 'prob' in locals() else confidence
+            "confidence": normal_conf
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Run Flask app
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
