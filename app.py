@@ -47,12 +47,13 @@ def predict():
         if not data or "text" not in data:
             return jsonify({"error": "Missing 'text' field"}), 400
 
-        raw = data["text"]
-        cleaned = clean_text(raw)
-        features = vectorizer.transform([cleaned])
-        result = model.predict(features)[0]
-        prob = model.predict_proba(features)[0][1]
-        confidence = round(prob * 100, 2)
+       raw = data["text"]
+cleaned = clean_text(raw)
+features = vectorizer.transform([cleaned]).toarray()  # Convert to dense
+result = model.predict(features)[0]
+prob = model.predict_proba(features)[0][1]
+confidence = round(prob * 100, 2)
+
 
         if result == 1:
             return jsonify({
