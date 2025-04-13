@@ -1,9 +1,10 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pickle
+import os
 import re
 import nltk
+import gdown
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
@@ -14,15 +15,27 @@ ps = PorterStemmer()
 app = Flask(__name__)
 CORS(app)
 
-# Load model and vectorizer
-model = pickle.load(open("CV_BestModel.sav", "rb"))
-vectorizer = pickle.load(open("vectorizer.sav", "rb"))
+# === CONFIG ===
+MODEL_URL = "https://drive.google.com/uc?id=YOUR_FILE_ID"  # replace with your actual file ID
+MODEL_PATH = "CV_BestModel.sav"
+VECTORIZER_PATH = "vectorizer.sav"
 
+# === CLEANING FUNCTION ===
 def clean_text(text):
     text = re.sub('[^a-zA-Z]', ' ', text)
     text = text.lower().split()
     return ' '.join([ps.stem(word) for word in text if word not in stop_words])
 
+# === DOWNLOAD MODEL IF NOT EXISTS ===
+if not os.path.exists(MODEL_PATH):
+    print("📥 Downloading model from Google Drive...")
+    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+
+# === LOAD MODEL AND VECTORIZER ===
+model = pickle.load(open(MODEL_PATH, "rb"))
+vectorizer = pickle.load(open(VECTORIZER_PATH, "rb"))
+
+# === API ROUTES ===
 @app.route("/", methods=["GET"])
 def home():
     return "✅ Anxiety/Depression Detection API is Live!"
@@ -32,7 +45,7 @@ def predict():
     try:
         data = request.get_json()
         if not data or "text" not in data:
-            return jsonify({"error": "Missing 'text' in request"}), 400
+            return jsonify({"error": "Missing 'text' field"}), 400
 
         raw = data["text"]
         cleaned = clean_text(raw)
@@ -59,7 +72,10 @@ def predict():
                 "tip": "💡 Tip: Try to identify the root cause of your anxiety and talk to someone you trust."
             })
 
-        return jsonify({"result": "Normal", "confidence": round((1 - prob) * 100, 2)})
+        return jsonify({
+            "result": "Normal",
+            "confidence": round((1 - prob) * 100, 2)
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
