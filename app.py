@@ -8,6 +8,7 @@ import gdown
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
+# Download NLTK stopwords
 nltk.download('stopwords')
 stop_words = set(stopwords.words("english"))
 ps = PorterStemmer()
@@ -15,23 +16,23 @@ ps = PorterStemmer()
 app = Flask(__name__)
 CORS(app)
 
-# === CONFIG ===
-MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # replace with your actual file ID
+# === GOOGLE DRIVE CONFIG ===
+MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # 🔁 Replace with your actual Google Drive file ID
 MODEL_PATH = "CV_BestModel.sav"
 VECTORIZER_PATH = "vectorizer.sav"
 
-# === CLEANING FUNCTION ===
+# === TEXT CLEANING ===
 def clean_text(text):
     text = re.sub('[^a-zA-Z]', ' ', text)
     text = text.lower().split()
     return ' '.join([ps.stem(word) for word in text if word not in stop_words])
 
-# === DOWNLOAD MODEL IF NOT EXISTS ===
+# === AUTO-DOWNLOAD MODEL IF NEEDED ===
 if not os.path.exists(MODEL_PATH):
     print("📥 Downloading model from Google Drive...")
     gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
-# === LOAD MODEL AND VECTORIZER ===
+# === LOAD MODEL & VECTORIZER ===
 model = pickle.load(open(MODEL_PATH, "rb"))
 vectorizer = pickle.load(open(VECTORIZER_PATH, "rb"))
 
@@ -47,13 +48,15 @@ def predict():
         if not data or "text" not in data:
             return jsonify({"error": "Missing 'text' field"}), 400
 
-       raw = data["text"]
-cleaned = clean_text(raw)
-features = vectorizer.transform([cleaned]).toarray()  # Convert to dense
-result = model.predict(features)[0]
-prob = model.predict_proba(features)[0][1]
-confidence = round(prob * 100, 2)
+        raw = data["text"]
+        cleaned = clean_text(raw)
 
+        # 🔧 Fix for SVC: Convert sparse to dense
+        features = vectorizer.transform([cleaned]).toarray()
+
+        result = model.predict(features)[0]
+        prob = model.predict_proba(features)[0][1]
+        confidence = round(prob * 100, 2)
 
         if result == 1:
             return jsonify({
@@ -81,5 +84,6 @@ confidence = round(prob * 100, 2)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# === RUN FLASK ===
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
