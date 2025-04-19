@@ -96,9 +96,9 @@ def predict():
                     {"name": "Mr. Parthiban D", "phone": "9443311360", "room": "SJT-326"},
                     {"name": "Mr. R. Muralitharan", "phone": "8981608883", "room": "GDN 151B"}
                 ],
-                "helpline": "📞 Helpline: 1800-599-0019 (India Mental Health Helpline)",
-                "online_support": "🌐 Online Support: https://www.mentalhealthindia.com/",
-                "tip": "💡 Tip: Try to identify the root cause of your anxiety and talk to someone you trust."
+                 "📞 Helpline": "1800-599-0019 (India Mental Health Helpline)",
+                 "🌐 Online Support": "https://www.mentalhealthindia.com/",
+                 "💡 Tip": "Try to identify the root cause of your anxiety and talk to someone you trust."
             })
 
         # Otherwise → Normal
