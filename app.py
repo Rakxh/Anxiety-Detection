@@ -97,7 +97,7 @@ def predict():
                     {"name": "Mr. R. Muralitharan", "phone": "8981608883", "room": "GDN 151B"}
                 ],
                  "helpline": "1800-599-0019 (India Mental Health Helpline)",
-                 "online Support": "https://www.mentalhealthindia.com/",
+                 "online_support": "https://www.mentalhealthindia.com/",
                  "tip": "Try to identify the root cause of your anxiety and talk to someone you trust."
             })
 
