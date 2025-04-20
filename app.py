@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # === Google Drive config ===
-MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"  # 🔁 Replace with your actual Drive model file ID
+MODEL_URL = "https://drive.google.com/uc?id=1LlvzsIRDMkw_dqZX3pX_Oq4_ZR33JTl0"
 MODEL_PATH = "CV_BestModel.sav"
 VECTORIZER_PATH = "vectorizer.sav"
 
@@ -36,7 +36,7 @@ if not os.path.exists(MODEL_PATH):
 model = pickle.load(open(MODEL_PATH, "rb"))
 vectorizer = pickle.load(open(VECTORIZER_PATH, "rb"))
 
-# === Keyword Triggers (stemmed)
+# === Enhanced Keyword Triggers (stemmed)
 keyword_raw = [
     "stressed", "anxious", "anxiety", "depressed", "depression", "panic", "sad",
     "hopeless", "worthless", "overwhelmed", "numb", "empty", "lonely", "crying", "upset",
@@ -45,14 +45,15 @@ keyword_raw = [
     "self-harm", "cutting", "suicidal", "hate myself", "useless", "burden", "failure",
     "avoiding people", "socially withdrawn", "no one understands", "isolated", "ignored",
     "insomnia", "no sleep", "sleeping all day", "chest pain", "racing heart", "tight chest",
-    "shaking", "sweaty", "nausea", "shortness of breath"
+    "shaking", "sweaty", "nausea", "shortness of breath",
+    "concentrate", "focus", "unable to focus", "unable to concentrate",
+    "not able to concentrate", "not able to focus", "disconnected", "blank", "mental fog"
+]
+negation_patterns = [
+    "not happy", "not okay", "not fine", "not good", "not feeling well", "not doing great",
+    "not able to focus", "not able to concentrate", "unable to focus", "unable to concentrate"
 ]
 keyword_triggers = [ps.stem(w) for w in keyword_raw]
-
-# === Negation Triggers ===
-negation_patterns = [
-    "not happy", "not okay", "not fine", "not good", "not feeling well", "not doing great"
-]
 
 # === Routes ===
 @app.route("/", methods=["GET"])
@@ -70,7 +71,6 @@ def predict():
         cleaned = clean_text(raw)
         cleaned_words = cleaned.split()
 
-        # 🔍 Fallback triggers
         if any(phrase in raw.lower() for phrase in negation_patterns):
             result = 1
             confidence = 91.0
@@ -96,12 +96,11 @@ def predict():
                     {"name": "Mr. Parthiban D", "phone": "9443311360", "room": "SJT-326"},
                     {"name": "Mr. R. Muralitharan", "phone": "8981608883", "room": "GDN 151B"}
                 ],
-                 "helpline": "1800-599-0019 (India Mental Health Helpline)",
-                 "online_support": "https://www.mentalhealthindia.com/",
-                 "tip": "Try to identify the root cause of your anxiety and talk to someone you trust."
+                "helpline": "1800-599-0019 (India Mental Health Helpline)",
+                "online_support": "https://www.mentalhealthindia.com/",
+                "tip": "Try to identify the root cause of your anxiety and talk to someone you trust."
             })
 
-        # Otherwise → Normal
         if 'prob' in locals():
             normal_conf = round((1 - prob) * 100, 2)
         else:
